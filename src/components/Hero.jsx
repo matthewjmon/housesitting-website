@@ -12,7 +12,7 @@ export default function Hero({ onBookClick }) {
       <div className="absolute inset-0 z-0">
         {/* Image */}
         <img
-          src="images/small-house-lights.jpg"
+          src="images/keys-in-house.jpg"
           alt="Cozy home interior"
           className="w-full h-full object-cover"
         />
