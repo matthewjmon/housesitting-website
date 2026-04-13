@@ -7,12 +7,28 @@
 const nodemailer = require('nodemailer')
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  connectionTimeout: 15000,
+  greetingTimeout:   15000,
+  socketTimeout:     20000,
 })
+
+// Verify SMTP connectivity once on startup so deployment issues show up in logs
+if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+  transporter.verify()
+    .then(() => {
+      console.log('[mailer] SMTP connection verified')
+    })
+    .catch(err => {
+      console.error('[mailer] SMTP verification failed:', err.message)
+    })
+}
 
 /**
  * @param {object} opts
