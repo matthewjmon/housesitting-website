@@ -15,20 +15,22 @@ export default function Hero({ onBookClick }) {
           1. Place your photo at public/images/hero-home.jpg
           2. Remove the gradient div below and uncomment the img + overlay divs
 
-          <img
-            src="/images/hero-home.jpg"
-            alt=""
-            className="w-full h-full object-cover"
-            fetchpriority="high"
-          />
-          <div className="absolute inset-0 bg-black/50" />
         */}
+        <img
+          src="/images/pexels-jakubzerdzicki-29871187.jpg"
+          alt=""
+          className="w-full h-full object-cover scale-[1.02]"
+          fetchpriority="high"
+          style={{
+            filter: 'saturate(0.95) contrast(1.03) brightness(0.8)',
+          }}
+        />
         <div
           className="absolute inset-0"
           style={{
             background: `
-              linear-gradient(135deg, rgba(30,20,10,0.75) 0%, rgba(60,40,15,0.68) 40%, rgba(180,120,40,0.48) 100%),
-              linear-gradient(to right, #1a0f05 0%, #3d2208 25%, #7a4a12 55%, #c17d2a 80%, #e8b96a 100%)
+              linear-gradient(135deg, rgba(18, 11, 7, 0.72) 0%, rgba(52, 30, 14, 0.52) 42%, rgba(120, 72, 24, 0.24) 100%),
+              linear-gradient(180deg, rgba(12, 8, 6, 0.16) 0%, rgba(12, 8, 6, 0.08) 36%, rgba(12, 8, 6, 0.54) 100%)
             `,
           }}
         />

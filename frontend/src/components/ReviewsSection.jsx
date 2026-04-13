@@ -191,7 +191,7 @@ export default function ReviewsSection() {
         {!loading && reviews.length === 0 && (
           <div className="max-w-md mx-auto text-center mb-10">
             <div className="card p-10">
-              <div className="text-5xl mb-4" aria-hidden="true">⭐</div>
+              <div className="text-5xl mb-4" aria-hidden="true">⭐⭐⭐</div>
               <h3 className="font-heading font-bold text-gray-900 text-xl mb-2">Be Our First Reviewer!</h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-6">
                 We're just getting started. If you've used our house sitting services, we'd love to hear from you!
