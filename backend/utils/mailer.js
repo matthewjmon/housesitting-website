@@ -1,33 +1,34 @@
+'use strict'
+
 /**
  * mailer.js
- * Thin wrapper around Nodemailer using Gmail SMTP.
+ * Thin wrapper around Resend's HTTPS API.
  * Call sendMail() anywhere in the app — it logs errors but never throws,
- * so a broken SMTP config won't crash the booking submission.
+ * so a broken email config won't crash the booking submission.
  */
-const nodemailer = require('nodemailer')
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  connectionTimeout: 15000,
-  greetingTimeout:   15000,
-  socketTimeout:     20000,
-})
+const { Resend } = require('resend')
 
-// Verify SMTP connectivity once on startup so deployment issues show up in logs
-if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-  transporter.verify()
-    .then(() => {
-      console.log('[mailer] SMTP connection verified')
-    })
-    .catch(err => {
-      console.error('[mailer] SMTP verification failed:', err.message)
-    })
+const resend = new Resend(process.env.RESEND_API_KEY)
+const FROM =
+  process.env.EMAIL_FROM ||
+  'Gonubie House Sitting <onboarding@resend.dev>'
+
+function mapAttachments(attachments = []) {
+  return attachments.map(att => {
+    const mapped = { filename: att.filename }
+
+    if (att.contentType) mapped.contentType = att.contentType
+    if (att.path) mapped.path = att.path
+
+    if (att.content && !att.path) {
+      mapped.content = Buffer.isBuffer(att.content)
+        ? att.content.toString('base64')
+        : Buffer.from(String(att.content)).toString('base64')
+    }
+
+    return mapped
+  })
 }
 
 /**
@@ -35,24 +36,29 @@ if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
  * @param {string|string[]} opts.to        - Recipient(s)
  * @param {string}          opts.subject   - Subject line
  * @param {string}          opts.html      - HTML body
- * @param {object[]}        [opts.attachments] - Nodemailer attachments array
+ * @param {object[]}        [opts.attachments] - Resend-compatible attachments array
  */
 async function sendMail({ to, subject, html, attachments }) {
-  // Silently skip in test/CI environments that don't configure SMTP
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.warn('[mailer] GMAIL_USER or GMAIL_APP_PASSWORD not set — email skipped.')
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[mailer] RESEND_API_KEY not set — email skipped.')
     return
   }
 
   try {
-    const info = await transporter.sendMail({
-      from:        `"Gonubie House Sitting" <${process.env.GMAIL_USER}>`,
-      to:          Array.isArray(to) ? to.join(', ') : to,
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: Array.isArray(to) ? to : [to],
       subject,
       html,
-      attachments,
+      attachments: attachments?.length ? mapAttachments(attachments) : undefined,
     })
-    console.log(`[mailer] ✅ Sent "${subject}" → ${info.accepted.join(', ')}`)
+
+    if (error) {
+      console.error(`[mailer] ❌ Resend failed for "${subject}":`, error.message || error)
+      return
+    }
+
+    console.log(`[mailer] ✅ Sent "${subject}" → ${data?.id}`)
   } catch (err) {
     console.error(`[mailer] ❌ Failed to send "${subject}":`, err.message)
   }
