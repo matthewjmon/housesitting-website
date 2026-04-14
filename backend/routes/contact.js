@@ -5,7 +5,7 @@
  */
 
 const express              = require('express')
-const { sendMail }         = require('../utils/mailer')
+const { sendOwnerNotification } = require('../utils/mailer')
 const { contactEmail, meetGreetEmail } = require('../utils/emailTemplates')
 
 // ── Contact form ─────────────────────────────────────────────────────────
@@ -19,10 +19,7 @@ contactRouter.post('/', async (req, res) => {
     if (!email?.trim())   return res.status(400).json({ error: 'Email is required.'   })
     if (!message?.trim()) return res.status(400).json({ error: 'Message is required.' })
 
-    const owners = [process.env.OWNER_EMAIL_1, process.env.OWNER_EMAIL_2].filter(Boolean)
-
-    await sendMail({
-      to:      owners,
+    await sendOwnerNotification({
       subject: `📩 Website Enquiry — ${name.trim()}`,
       html:    contactEmail({ name, email, phone, message }),
     })
@@ -44,10 +41,7 @@ meetRouter.post('/', async (req, res) => {
     if (!name?.trim())  return res.status(400).json({ error: 'Name is required.'  })
     if (!phone?.trim()) return res.status(400).json({ error: 'Phone is required.' })
 
-    const owners = [process.env.OWNER_EMAIL_1, process.env.OWNER_EMAIL_2].filter(Boolean)
-
-    await sendMail({
-      to:      owners,
+    await sendOwnerNotification({
       subject: `☕ Meet & Greet Request — ${name.trim()}`,
       html:    meetGreetEmail(req.body),
     })

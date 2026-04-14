@@ -11,7 +11,7 @@
 const express  = require('express')
 const Booking  = require('../models/Booking')
 const { BlockedDate } = require('../models/Review')
-const { sendMail }    = require('../utils/mailer')
+const { sendOwnerNotification, sendGuestConfirmation } = require('../utils/mailer')
 const {
   newBookingOwner,
   bookingConfirmGuest,
@@ -23,8 +23,7 @@ const {
 const router = express.Router()
 
 // Helper — build the list of owner email addresses from env
-const ownerEmails = () =>
-  [process.env.OWNER_EMAIL_1, process.env.OWNER_EMAIL_2].filter(Boolean)
+
 
 // ── GET /dates — array of all booked YYYY-MM-DD strings ─────────────────
 router.get('/dates', async (req, res) => {
@@ -87,16 +86,15 @@ router.post('/', async (req, res) => {
     }
 
     // Notify both owners with full details + calendar attachment
-    sendMail({
-      to:          ownerEmails(),
+    sendOwnerNotification({
       subject:     `🏠 New Booking Request — ${booking.guestName} (${booking.dateFrom} → ${booking.dateTo})`,
       html:        newBookingOwner(booking),
       attachments: [icsAttachment],
     })
 
-    // Auto-reply to guest
+    // Guest confirmation is intentionally disabled for launch on the free tier
     if (booking.guestEmail) {
-      sendMail({
+      sendGuestConfirmation({
         to:      booking.guestEmail,
         subject: 'Booking Request Received — Gonubie House Sitting',
         html:    bookingConfirmGuest(booking),
@@ -130,14 +128,14 @@ router.patch('/:id/status', async (req, res) => {
     )
     if (!booking) return res.status(404).json({ error: 'Booking not found.' })
 
-    // Notify guest of status change
+    // Guest emails are intentionally disabled for launch on the free tier
     if (status === 'confirmed' && booking.guestEmail) {
       const icsAttachment = {
         filename:    'booking-confirmed.ics',
         content:     toICS(booking),
         contentType: 'text/calendar',
       }
-      sendMail({
+      sendGuestConfirmation({
         to:          booking.guestEmail,
         subject:     '✅ Booking Confirmed — Gonubie House Sitting',
         html:        bookingAcceptedGuest(booking),
@@ -146,7 +144,7 @@ router.patch('/:id/status', async (req, res) => {
     }
 
     if (status === 'cancelled' && booking.guestEmail) {
-      sendMail({
+      sendGuestConfirmation({
         to:      booking.guestEmail,
         subject: 'Booking Cancellation — Gonubie House Sitting',
         html:    bookingCancelledGuest(booking),

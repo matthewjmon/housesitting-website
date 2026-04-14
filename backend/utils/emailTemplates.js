@@ -1,7 +1,7 @@
 /**
  * emailTemplates.js
  *
- * Centralised HTML email templates for all notification types.
+ * Centralized HTML email templates for all notification types.
  * Every booking email includes an attached .ics file so it can be
  * imported directly into Google Calendar with one click.
  */

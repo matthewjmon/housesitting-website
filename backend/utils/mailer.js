@@ -2,26 +2,25 @@
 
 /**
  * mailer.js
- * Thin wrapper around Resend's HTTPS API.
- * Call sendMail() anywhere in the app — it logs errors but never throws,
- * so a broken email config won't crash the booking submission.
+ * Production-safe mailer for Resend free tier.
+ * Free tier restriction: can only send to the Resend account email
+ * until a domain is verified. So all internal notifications are routed
+ * to one inbox we control.
  */
 
 const { Resend } = require('resend')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM =
-  process.env.EMAIL_FROM ||
-  'Gonubie House Sitting <onboarding@resend.dev>'
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL
+const FROM = process.env.EMAIL_FROM || 'Gonubie House Sitting <onboarding@resend.dev>'
 
 function mapAttachments(attachments = []) {
   return attachments.map(att => {
     const mapped = { filename: att.filename }
 
     if (att.contentType) mapped.contentType = att.contentType
-    if (att.path) mapped.path = att.path
 
-    if (att.content && !att.path) {
+    if (att.content) {
       mapped.content = Buffer.isBuffer(att.content)
         ? att.content.toString('base64')
         : Buffer.from(String(att.content)).toString('base64')
@@ -31,37 +30,39 @@ function mapAttachments(attachments = []) {
   })
 }
 
-/**
- * @param {object} opts
- * @param {string|string[]} opts.to        - Recipient(s)
- * @param {string}          opts.subject   - Subject line
- * @param {string}          opts.html      - HTML body
- * @param {object[]}        [opts.attachments] - Resend-compatible attachments array
- */
-async function sendMail({ to, subject, html, attachments }) {
+async function sendOwnerNotification({ subject, html, attachments = [] }) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn('[mailer] RESEND_API_KEY not set — email skipped.')
+    console.warn('[mailer] RESEND_API_KEY not set — skipping owner notification')
+    return
+  }
+
+  if (!NOTIFY_EMAIL) {
+    console.warn('[mailer] NOTIFY_EMAIL not set — skipping owner notification')
     return
   }
 
   try {
     const { data, error } = await resend.emails.send({
       from: FROM,
-      to: Array.isArray(to) ? to : [to],
+      to: [NOTIFY_EMAIL],
       subject,
       html,
-      attachments: attachments?.length ? mapAttachments(attachments) : undefined,
+      attachments: attachments.length ? mapAttachments(attachments) : undefined,
     })
 
     if (error) {
-      console.error(`[mailer] ❌ Resend failed for "${subject}":`, error.message || error)
+      console.error('[mailer] owner notification failed:', error.message || error)
       return
     }
 
-    console.log(`[mailer] ✅ Sent "${subject}" → ${data?.id}`)
+    console.log(`[mailer] owner notification sent → ${NOTIFY_EMAIL} ${data?.id || ''}`.trim())
   } catch (err) {
-    console.error(`[mailer] ❌ Failed to send "${subject}":`, err.message)
+    console.error('[mailer] owner notification failed:', err?.message || err)
   }
 }
 
-module.exports = { sendMail }
+async function sendGuestConfirmation({ to, subject }) {
+  console.log(`[mailer] guest confirmation skipped (free tier) → ${to} | "${subject}"`)
+}
+
+module.exports = { sendOwnerNotification, sendGuestConfirmation }
